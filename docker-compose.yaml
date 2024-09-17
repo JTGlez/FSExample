@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: ./fs-example
+      dockerfile: Dockerfile
+      target: dev
+    restart: always
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - HOSTNAME=0.0.0.0
+    volumes:
+      - ./fs-example:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - deps
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - deps
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  flyway:
+    image: flyway/flyway:latest
+    command: -configFiles=/flyway/conf/flyway.conf -locations=filesystem:/flyway/sql -connectRetries=60 migrate
+    volumes:
+      - ./sql_versions:/flyway/sql
+      - ./flyway.conf:/flyway/conf/flyway.conf
+    networks:
+      - deps
+    depends_on:
+      - db
+
+networks:
+  deps:
+
+volumes:
+  pgdata:
